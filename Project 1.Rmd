@@ -1,0 +1,106 @@
+---
+title: "Week2 Project"
+output: html_document
+date: "2022-12-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(knitr)
+library(dplyr)
+library(lattice)
+```
+
+#1 Loading and processing the data 
+```{r}
+data <- read.csv("activity.csv")
+names(data)
+```
+
+# What is the mean Total number of steps taken per day
+```{r}
+# Group data by date and sum steps per day
+data_by_day  <- group_by(data, date)
+data_steps_per_day <- summarise(data_by_day, Sum= sum(steps))
+head(data_steps_per_day)
+
+# Histogram for total steps taken per day 
+hist(data_steps_per_day$Sum, na.rm=TRUE, main=" Total Number of Steps Taken Per Day", xlab="Number of Steps")
+
+# Calculating mean and median of steps taken per day 
+mean(data_steps_per_day$Sum, na.rm = TRUE)
+median(data_steps_per_day$Sum, na.rm = TRUE)
+```
+
+# What is the daily activity Pattern? 
+
+```{r}
+#Aggregating Steps by Interval and making a time series plot 
+data_steps_by_Interval <- aggregate(data, steps~interval, mean, na.rm =TRUE)
+plot(data_steps_by_Interval$interval, data_steps_by_Interval$steps, type="l", main="Average number of steps for all days", xlab="Interval", 
+     ylab="Average number of steps")
+```
+
+# Imputing Missing Values 
+
+```{r}
+# Calculating the total number of row with missing values 
+sum(is.na(data))
+
+# Replacing missing value with the daily mean 
+
+inpt_data <- data
+
+for(i in data_steps_by_Interval$interval){
+        inpt_data[inpt_data$interval == i & is.na(inpt_data),]$steps <- 
+                data_steps_by_Interval$steps[data_steps_by_Interval$interval == i]
+}
+
+head(inpt_data)
+
+# making a histogram for total number of steps taken per day
+data_total_steps <- aggregate(steps~date, data=inpt_data, sum)
+hist(data_total_steps$steps, main="Number of Steps Taken Per Day", xlab = "Steps per Day")
+
+#Calculating mean and median 
+mean(data_total_steps$steps)
+median(data_total_steps$steps)
+max(data_total_steps$steps)
+
+```
+
+#Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+# Creating a weekday and a weekend factor variable 
+
+type_day <- function(date){
+        if(weekdays(as.Date(date)) %in% c("Saturday", "Sunday")){
+                "Weekend"
+        }else {
+                "WeekDay"
+        }
+}
+
+inpt_data$type_day <- as.factor(sapply(inpt_data$date, type_day))
+```
+
+# Making a panel time series plot 
+
+
+```{r}
+par(mfrow = c(2,1))
+
+for (type in c("Weekend", "WeekDay")){
+        steps.type <- aggregate(steps ~ interval, data = inpt_data, subset = inpt_data$type_day == type, FUN=mean)
+        plot(steps.type, type="l", main = type, xlab = "5-minute interval", 
+       ylab = "Average number of steps")
+}
+```
+
+
+
+
